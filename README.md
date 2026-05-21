@@ -1,22 +1,28 @@
-# Tasmota als Grid Meter für Victron Venus OS
+# Smartzähler als Grid Meter für Victron Venus OS
 
-Einen beliebigen Tasmota-Stromzähler als virtuellen Grid Meter in Venus OS einbinden — komplett über Node-RED und den `victron-virtual`-Node. Keine SSH-Eingriffe, keine Python-Skripte, kein modifiziertes Dateisystem.
+Einen beliebigen smarten Stromzähler mit Web-Schnittstelle als virtuellen Grid Meter in Venus OS einbinden — komplett über Node-RED und den `victron-virtual`-Node. Keine SSH-Eingriffe, keine Python-Skripte, kein modifiziertes Dateisystem.
 
-Der Charme: Durch das vorgeschaltete Function-Node lässt sich **jedes Tasmota-JSON-Format** auf die Venus-OS-Pfade übersetzen — egal ob SML-Smartmeter, Shelly 3EM, SDM630 oder Smart-Plug. Egal ob 1- oder 3-phasig. Egal ob per HTTP gepullt oder per MQTT gepushed.
+Der Charme: Durch das vorgeschaltete Function-Node lässt sich so ziemlich jeder Smartzähler mit Web-Schnittstelle (HTTP oder MQTT) in Venus OS betreiben — Tasmota mit SML-Lesekopf, Shelly 3EM, SDM630 per Modbus-Bridge, Smart-Plugs, was auch immer. Egal ob 1- oder 3-phasig, egal ob per HTTP gepullt oder per MQTT gepushed.
 
-![Tasmota Grid Meter in der Venus OS Device List](images/device-list.png)
+Die KI eures Vertrauens wird euch, sobald ihr einmal das Prinzip verstanden habt, für jedes beliebige Zählerformat den passenden Übersetzer-Code liefern.
+
+<p align="center">
+  <img src="/device-list.png" alt="Grid Meter in der Venus OS Device List" width="700">
+</p>
 
 ## Voraussetzungen
 
 - GX-Gerät mit **Venus OS Large** (Node-RED ist vorinstalliert)
-- Tasmota-Gerät mit Leistungs- und Energiewerten im JSON
+- Smartzähler mit Leistungs- und Energiewerten als JSON über HTTP oder MQTT
 - Bidirektionaler Zähler, wenn Bezug *und* Einspeisung unterschieden werden sollen
 
 ## Architektur
 
 Der ganze Flow besteht aus vier Nodes plus optionalem Fehler-Catch:
 
-![Node-RED Flow](images/node-red-flow.png)
+<p align="center">
+  <img src="/node-red-flow.png" alt="Node-RED Flow" width="650">
+</p>
 
 ```
 [inject 2s] → [HTTP GET] → [function] → [virtual device]
@@ -28,14 +34,18 @@ Der **virtual-Node** aus der Palette `node-red-contrib-victron-virtual` legt das
 
 In der Palette unter **Victron Energy → Virtual** den `Virtual Device`-Node in den Flow ziehen und doppelklicken:
 
-![Virtual Device Konfiguration](images/virtual-device-config.png)
+<p align="center">
+  <img src="/virtual-device-config.png" alt="Virtual Device Konfiguration" width="450">
+</p>
 
 - **Device:** `Grid meter` auswählen (Dropdown zeigt alle möglichen Typen)
-- **Name:** z.B. `Tasmota Grid`
+- **Name:** z.B. `Smartmeter Grid` oder wie du magst
 - **Nr of phases:** entsprechend deinem Setup (siehe unten)
 - **Initialize with defaults:** `Yes`
 
-![Geräte-Typ Dropdown](images/device-types.png)
+<p align="center">
+  <img src="/device-types.png" alt="Geräte-Typ Dropdown" width="350">
+</p>
 
 > **Hinweis (von Victron selbst):** Virtuelle Geräte sind nicht offiziell für ESS-Setups empfohlen. Für produktive Anlagen gibt es [offiziell unterstützte Zähler](https://www.victronenergy.com/accessories/energy-meter). Dieser Weg funktioniert zuverlässig, ist aber ein "use at your own risk".
 
@@ -54,14 +64,14 @@ Niemals künstlich auf 3 Phasen aufteilen, wenn der Zähler nur die Summe kennt 
 ### HTTP (empfohlen, wenn MQTT schon woanders genutzt wird)
 
 - **Inject-Node:** Repeat `interval`, alle 2 s, "inject once after deploy"
-- **HTTP-Request:** `GET http://<tasmota-ip>/cm?cmnd=Status%208`, Return `parsed JSON object`, Timeout 1500 ms
+- **HTTP-Request:** `GET http://<zähler-ip>/<endpunkt>`, Return `parsed JSON object`, Timeout 1500 ms
 
-`Status 8` liefert nur den Sensor-Block — kompakt, schnell, ideal für häufiges Polling.
+Für Tasmota z.B. `http://<ip>/cm?cmnd=Status%208` — liefert nur den Sensor-Block, kompakt und schnell. Für andere Zähler den jeweiligen JSON-Endpunkt (Shelly: `/status`, Shelly Gen2: `/rpc/Shelly.GetStatus` etc.).
 
 ### MQTT (Alternative)
 
-- **MQTT-In-Node:** Topic `tele/<dein-topic>/SENSOR`, Output `parsed JSON object`
-- Auf Tasmota: `MqttHost <cerbo-ip>` und `SetOption59 1` für sofortiges Senden bei Werteänderungen
+- **MQTT-In-Node:** Topic entsprechend deinem Zähler, Output `parsed JSON object`
+- Beispiel Tasmota: `tele/<topic>/SENSOR`, dazu auf dem Gerät `MqttHost <cerbo-ip>` und `SetOption59 1` für sofortiges Senden bei Werteänderungen
 
 ## Schritt 3: Function — der flexible Übersetzer
 
@@ -79,7 +89,9 @@ msg.payload = {
 };
 ```
 
-### Beispiel A: SML-Smartmeter (Tasmota-Treiber E320)
+Die Function muss also nur das JSON deines Zählers in dieses Schema überführen. Im Folgenden zwei Beispiele.
+
+### Beispiel A: Tasmota mit SML-Smartmeter (Treiber E320)
 
 Typisch für IR-Lesekopf am EVU-Zähler (EMH, Iskra, Logarex etc.).
 
@@ -105,7 +117,7 @@ context.set("last", msg.payload);
 return msg;
 ```
 
-### Beispiel B: Shelly 3EM (dreiphasig, ENERGY-Block mit Arrays)
+### Beispiel B: Shelly 3EM mit Tasmota (dreiphasig, ENERGY-Block mit Arrays)
 
 ```javascript
 const e = msg.payload?.StatusSNS?.ENERGY ?? msg.payload?.ENERGY;
@@ -125,6 +137,8 @@ msg.payload = {
 return msg;
 ```
 
+Für andere Zähler (Shelly Pro 3EM nativ, SDM630 per ESPHome, Eastron etc.) lässt sich nach demselben Muster eine Function schreiben — einfach das JSON deines Geräts im Debug-Sidebar anschauen und die Felder auf die Venus-OS-Pfade mappen.
+
 ## Schritt 4: Verbinden und Deploy
 
 ```
@@ -135,8 +149,8 @@ Nach dem Deploy sollte unter dem virtual-Node ein grünes Statuslabel erscheinen
 
 ## Verifikation
 
-1. Cerbo Device List → `Tasmota Grid` (bzw. dein gewählter Name) erscheint mit Live-Werten
-2. Energiefluss-Übersicht zeigt den Netz-Pfeil
+1. Cerbo Device List → dein Grid Meter erscheint mit Live-Werten
+2. Energiefluss-Übersicht zeigt den Netz-Pfeil in die richtige Richtung
 3. **Vorzeichen-Test:** Mittags bei PV-Überschuss → `/Ac/Power` wird negativ
 
 ## Häufige Stolpersteine
@@ -144,13 +158,13 @@ Nach dem Deploy sollte unter dem virtual-Node ein grünes Statuslabel erscheinen
 | Symptom | Lösung |
 |---------|--------|
 | `Invalid payload type: number` | Werte in Objekt verpacken mit `/Ac/...`-Keys statt Einzelwert senden |
-| Virtual-Node ohne Status nach Deploy | Function gibt `null` zurück — JSON-Pfad zur Tasmota-Antwort prüfen |
-| Vorzeichen immer positiv | Zähler nicht bidirektional, SML-Skript signed lesen |
-| Werte verschwinden bei Tasmota-Ausfall | `context.set/get("last", …)` für Last-Known-Good (in Beispielen enthalten) |
+| Virtual-Node ohne Status nach Deploy | Function gibt `null` zurück — JSON-Pfad zur Zählerantwort im Debug-Sidebar prüfen |
+| Vorzeichen immer positiv | Zähler nicht bidirektional, ggf. signed auslesen oder anderen Sensor verwenden |
+| Werte verschwinden bei Zähler-Ausfall | `context.set/get("last", …)` für Last-Known-Good (in Beispielen enthalten) |
 
 ## Vorteile
 
 - Komplett über Node-RED, **keine zusätzliche Software** auf Venus OS
 - Updatesicher (keine `/data/etc/...`-Hacks)
-- Format-agnostisch durch Function-Node
-- Tasmota kann gleichzeitig Home Assistant, IOBroker und Venus OS füttern
+- Format-agnostisch durch Function-Node — funktioniert mit jedem JSON-fähigen Zähler
+- Der Zähler kann gleichzeitig Home Assistant, IOBroker und Venus OS füttern
