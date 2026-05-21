@@ -47,7 +47,7 @@ In der Palette unter **Victron Energy → Virtual** den `Virtual Device`-Node in
   <img src="/device-types.png" alt="Geräte-Typ Dropdown" width="350">
 </p>
 
-> **Hinweis (von Victron selbst):** Virtuelle Geräte sind nicht offiziell für ESS-Setups empfohlen. Für produktive Anlagen gibt es [offiziell unterstützte Zähler](https://www.victronenergy.com/accessories/energy-meter). Dieser Weg funktioniert zuverlässig, ist aber ein "use at your own risk".
+> **Hinweis von Victron:** Virtuelle Geräte sind nicht offiziell für ESS-Setups empfohlen. Für produktive Anlagen empfiehlt Victron die offiziell unterstützten Zähler.
 
 ### Wie viele Phasen?
 
@@ -168,3 +168,9 @@ Nach dem Deploy sollte unter dem virtual-Node ein grünes Statuslabel erscheinen
 - Updatesicher (keine `/data/etc/...`-Hacks)
 - Format-agnostisch durch Function-Node — funktioniert mit jedem JSON-fähigen Zähler
 - Der Zähler kann gleichzeitig Home Assistant, IOBroker und Venus OS füttern
+
+## Haftungsausschluss
+
+Diese Anleitung beschreibt eine private Bastellösung und wird ohne jegliche Gewährleistung bereitgestellt. Die Nutzung erfolgt auf eigenes Risiko und in eigener Verantwortung. Eine Haftung für Schäden an Geräten, Datenverlust, fehlerhafte Abrechnungen, Beeinträchtigungen der Stromversorgung oder sonstige unmittelbare oder mittelbare Folgen ist ausgeschlossen, soweit gesetzlich zulässig.
+
+Arbeiten an der Elektroinstallation dürfen ausschließlich durch eine zugelassene Elektrofachkraft ausgeführt werden. Für die Einspeisung von Strom ins öffentliche Netz gelten die Vorgaben des jeweiligen Netzbetreibers (insbesondere VDE-AR-N 4105 in Deutschland); die hier beschriebene Lösung ist ausdrücklich **kein** zertifizierter, eichrechtskonformer oder von einem Netzbetreiber zugelassener Energiezähler und darf nicht als solcher verwendet werden. Sie dient ausschließlich der internen Visualisierung und Steuerung im eigenen Energiemanagement.
